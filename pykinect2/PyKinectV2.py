@@ -2111,12 +2111,12 @@ ICoordinateMapper._methods_ = [
               ( [], c_uint, 'depthPointCount' ),
               ( ['in'], POINTER(c_ushort), 'depthFrameData' ),
               ( [], c_uint, 'colorPointCount' ),
-              ( [], POINTER(_ColorSpacePoint), 'colorSpacePoints' )),
+              ( [], POINTER(c_float), 'colorSpacePoints' )),  # type should be POINTER(_ColorSpacePoint) but it crashed python while c_float works
     COMMETHOD([], HRESULT, 'MapColorFrameToDepthSpace',
               ( [], c_uint, 'depthDataPointCount' ),
               ( ['in'], POINTER(c_ushort), 'depthFrameData' ),
               ( [], c_uint, 'depthPointCount' ),
-              ( [], POINTER(_DepthSpacePoint), 'depthSpacePoints' )),
+              ( [], POINTER(c_float), 'depthSpacePoints' )), # type should be POINTER(_DepthSpacePoint) but it crashed python while c_float works
     COMMETHOD([], HRESULT, 'MapColorFrameToCameraSpace',
               ( [], c_uint, 'depthDataPointCount' ),
               ( ['in'], POINTER(c_ushort), 'depthFrameData' ),

@@ -18,6 +18,11 @@ else:
 
 KINECT_MAX_BODY_COUNT = 6
 
+'''
+'''     
+        
+
+
 class PyKinectRuntime(object):
     """manages Kinect objects and simplifying access to them"""
     def __init__(self, frame_source_types):
@@ -87,6 +92,7 @@ class PyKinectRuntime(object):
         self._infrared_source = self._sensor.InfraredFrameSource
         self.infrared_frame_desc = self._infrared_source.FrameDescription 
         self._depth_source = self._sensor.DepthFrameSource 
+       
         self.depth_frame_desc = self._depth_source.FrameDescription 
         self._body_index_source = self._sensor.BodyIndexFrameSource 
         self.body_index_frame_desc = self._body_index_source.FrameDescription 
@@ -171,6 +177,44 @@ class PyKinectRuntime(object):
         self._last_infrared_frame_access = self._last_infrared_frame_time = start_clock
         self._last_long_exposure_infrared_frame_access = self._last_long_exposure_infrared_frame_time = start_clock
         self._last_audio_frame_access = self._last_audio_frame_time = start_clock
+
+        # the following is used by the coordinatemapper        
+        self._last_depth_to_color_space=None
+        self._last_depth_to_camera_space=None
+        self._last_color_to_depth_space=None
+        self._last_color_to_camera_space=None
+
+        self.depth_to_color_count =kinect._depth_frame_data_capacity 
+        self.depth_to_color_type = _ColorSpacePoint * self.depth_to_color_count.value
+        self._last_depth_to_color_space=ctypes.cast(self.depth_to_color_type(), ctypes.POINTER(ctypes.c_float))
+        #   mapper.MapDepthFrameToColorSpace(kinect._depth_frame_data_capacity, kinect._depth_frame_data,
+        #                       CSP_Count, CSP)
+        #   npCSP= np.copy(np.ctypeslib.as_array(CSP, shape=(kinect.depth_frame_desc.Height,kinect.depth_frame_desc.Width,2)))
+        
+        
+        self.color_to_depth_count= ctypes.c_ulong(kinect.color_frame_desc.Height*kinect.color_frame_desc.Width)
+        self.color_to_depth_type= _DepthSpacePoint * self.color_to_depth_count.value
+        self._last_color_to_depth_space= ctypes.cast(self.color_to_depth_type(), ctypes.POINTER(ctypes.c_float))
+        #   mapper.MapColorFrameToDepthSpace(kinect._depth_frame_data_capacity, kinect._depth_frame_data,
+        #                       self.DSP_Count, self.DSP)
+        #   npDSP = np.ctypeslib.as_array(self.DSP, shape=(1080,1920,2))                
+
+
+    def map_depth_to_color(self, depth=None):
+        ctdepth=self._last_depth_frame_data if depth is None else depth
+        self._mapper.MapDepthFrameToColorSpace(self.depth_to_color_count, 
+                                               ctdepth,
+                                               self.depth_to_color_count, 
+                                               self._last_depth_to_color_space)
+        return np.ctypeslib.as_arrat(self._last_color_to_depth_space, shape=(self.color_frame_desc.Height, self.color_frame_desc.Width))
+        
+    def map_color_to_depth(self, depth=None):
+        ctdepth=self._last_depth_frame_data if depth is None else depth
+        self._mapper.MapDepthFrameToColorSpace(self.depth_to_color_count, 
+                                               ctdepth,
+                                               self.color_to_depth_count, 
+                                               self._last_color_to_depth_space)
+        return np.ctypeslib.as_arrat(self._last_color_to_depth_space, shape=(self.depth_frame_desc.Height, self.depth_frame_desc.Width))
 
     def close(self):
         if self._sensor is not None:
@@ -321,7 +365,7 @@ class PyKinectRuntime(object):
                 else:
                     break
 
-    
+
     def handle_color_arrived(self, handle_index):
         colorFrameEventData = self._color_frame_reader.GetFrameArrivedEventData(self._handles[handle_index])
         colorFrameRef = colorFrameEventData.FrameReference
@@ -357,7 +401,7 @@ class PyKinectRuntime(object):
         depthFrameRef = None
         depthFrameEventData = None
 
-  
+
     def handle_body_arrived(self, handle_index):
         bodyFrameEventData = self._body_frame_reader.GetFrameArrivedEventData(self._handles[handle_index])
         bofyFrameRef = bodyFrameEventData.FrameReference
