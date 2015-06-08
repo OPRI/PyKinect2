@@ -179,43 +179,30 @@ class PyKinectRuntime(object):
         self._last_audio_frame_access = self._last_audio_frame_time = start_clock
 
         # the following is used by the coordinatemapper        
-        self._last_depth_to_color_space=None
-        self._last_depth_to_camera_space=None
-        self._last_color_to_depth_space=None
-        self._last_color_to_camera_space=None
-
-        self.depth_to_color_count =kinect._depth_frame_data_capacity 
-        self.depth_to_color_type = _ColorSpacePoint * self.depth_to_color_count.value
-        self._last_depth_to_color_space=ctypes.cast(self.depth_to_color_type(), ctypes.POINTER(ctypes.c_float))
-        #   mapper.MapDepthFrameToColorSpace(kinect._depth_frame_data_capacity, kinect._depth_frame_data,
-        #                       CSP_Count, CSP)
-        #   npCSP= np.copy(np.ctypeslib.as_array(CSP, shape=(kinect.depth_frame_desc.Height,kinect.depth_frame_desc.Width,2)))
         
+        self._last_color_to_depth_data=None
+        self._color_to_depth_capacity= ctypes.c_ulong(self.color_frame_desc.Height*self.color_frame_desc.Width)
+        self._color_to_depth_type= _DepthSpacePoint * self._color_to_depth_capacity.value
+        self._last_color_to_depth_data= ctypes.cast(self._color_to_depth_type(), ctypes.POINTER(ctypes.c_float))
         
-        self.color_to_depth_count= ctypes.c_ulong(kinect.color_frame_desc.Height*kinect.color_frame_desc.Width)
-        self.color_to_depth_type= _DepthSpacePoint * self.color_to_depth_count.value
-        self._last_color_to_depth_space= ctypes.cast(self.color_to_depth_type(), ctypes.POINTER(ctypes.c_float))
-        #   mapper.MapColorFrameToDepthSpace(kinect._depth_frame_data_capacity, kinect._depth_frame_data,
-        #                       self.DSP_Count, self.DSP)
-        #   npDSP = np.ctypeslib.as_array(self.DSP, shape=(1080,1920,2))                
-
-
-    def map_depth_to_color(self, depth=None):
-        ctdepth=self._last_depth_frame_data if depth is None else depth
-        self._mapper.MapDepthFrameToColorSpace(self.depth_to_color_count, 
-                                               ctdepth,
-                                               self.depth_to_color_count, 
-                                               self._last_depth_to_color_space)
-        return np.ctypeslib.as_arrat(self._last_color_to_depth_space, shape=(self.color_frame_desc.Height, self.color_frame_desc.Width))
+        self._last_depth_to_color_data=None
+        self._depth_to_color_capacity= ctypes.c_ulong(self.depth_frame_desc.Height*self.depth_frame_desc.Width)
+        self._depth_to_color_type= _DepthSpacePoint * self._depth_to_color_capacity.value
+        self._last_depth_to_color_data= ctypes.cast(self._depth_to_color_type(), ctypes.POINTER(ctypes.c_float))
         
+
     def map_color_to_depth(self, depth=None):
-        ctdepth=self._last_depth_frame_data if depth is None else depth
-        self._mapper.MapDepthFrameToColorSpace(self.depth_to_color_count, 
-                                               ctdepth,
-                                               self.color_to_depth_count, 
-                                               self._last_color_to_depth_space)
-        return np.ctypeslib.as_arrat(self._last_color_to_depth_space, shape=(self.depth_frame_desc.Height, self.depth_frame_desc.Width))
-
+        ctdepth=self._depth_frame_data if depth is None else depth
+        self._mapper.MapColorFrameToDepthSpace(self._depth_frame_data_capacity, ctdepth,
+                            self._color_to_depth_capacity, self._last_color_to_depth_data)
+        return numpy.ctypeslib.as_array(self._last_color_to_depth_data, shape=(self.color_frame_desc.Height, self.color_frame_desc.Width,2))
+        
+    def map_depth_to_color(self, depth=None):
+        ctdepth=self._depth_frame_data if depth is None else depth
+        self._mapper.MapDepthFrameToColorSpace(self._depth_frame_data_capacity, ctdepth,
+                            self._depth_to_color_capacity, self._last_depth_to_color_data)
+        return numpy.ctypeslib.as_array(self._last_depth_to_color_data, shape=(self.depth_frame_desc.Height, self.depth_frame_desc.Width,2))
+        
     def close(self):
         if self._sensor is not None:
             ctypes.windll.kernel32.SetEvent(self._close_event)
